@@ -116,7 +116,7 @@ section{padding:44px 0;border-top:1px solid var(--line)}
 .pnl{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 14px 12px;transition:border-color .3s;min-width:0}
 .pnl.tick{border-color:rgba(215,253,0,.45)}
 .pnl .pid{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--mute)}
-.pnl .pw{font-size:24px;font-weight:600;color:var(--cream);letter-spacing:-.02em;margin:6px 0 2px}
+.pnl .pw{font-size:22px;font-weight:600;color:var(--cream);letter-spacing:-.02em;margin:6px 0 2px}
 .pnl .pw small{font-size:12px;font-weight:400;color:var(--mute);margin-left:2px}
 .pnl .pr{font-size:12px;font-weight:600;letter-spacing:.5px}
 .pnl .pr.aaa{color:var(--green)}
@@ -125,6 +125,13 @@ section{padding:44px 0;border-top:1px solid var(--line)}
 .pnl .spark{display:flex;align-items:flex-end;gap:2px;height:22px;margin-top:8px}
 .pnl .spark i{flex:1;background:rgba(255,170,0,.35);border-radius:1px;min-height:2px}
 .pnl .spark i:last-child{background:var(--gold)}
+.pnl .paddr{font-size:11px;color:var(--grey);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pnl .pm{display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;margin:10px 0 0}
+.pnl .pm dt{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.pnl .pm dd{margin:0;font-size:14px;font-weight:600;color:var(--cream)}
+.pnl .pv{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--green)}
+.pnl .pv .vdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:none}
+.pnl .ph{font-size:11px;color:var(--mute);margin-top:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .feednote{font-size:13px;color:var(--grey);margin-top:12px}
 /* CTA banner */
 .cta-banner{background:var(--bg2);position:relative;overflow:hidden;padding:44px 0;border-top:0}
@@ -197,10 +204,10 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
 <div class="wrap"><section id="feed">
   <div class="feedhead">
     <div class="sechead" style="margin-bottom:0">Live panel feed &#183; Enlit demo array</div>
-    <div class="feedstat sim" id="feedstat"><span class="fdot"></span><span id="feedlabel">CONNECTING&#8230;</span></div>
+    <div class="feedstat sim" id="feedstat"><span class="fdot"></span><span id="feedlabel">DEMO DATA &#183; 15s</span></div>
   </div>
   <div class="panels" id="panels"></div>
-  <div class="feednote">Six-panel demo array streaming from chip.sunified.ai &#183; refreshed every 15 seconds. Ratings are per-panel, hardware-attested.</div>
+  <div class="feednote">Six-panel demo array, using the same per-panel generator as the Enlit demo at <a href="https://chip.sunified.ai" target="_blank" rel="noopener">chip.sunified.ai</a> &#183; refreshed every 15 seconds. Demo data generated in your browser, not measured field readings. Each card shows the PV address, energy, voltage, temperature, UNITY Sensor state and the latest reading hash.</div>
 </section></div>
 
 <div class="wrap"><section>
@@ -266,75 +273,89 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
     }, true);
   })();
 
-  // ---- live panel feed harness ----
+  // ---- panel feed harness ----
+  // Demo mode ports the per-panel generator used by chip.sunified.ai (Sunified Enlit Demo):
+  // random PV address per panel, daylight energy curve, ~12 V voltage, 22.1 C, UNITY Sensor VERIFIED,
+  // short hash per reading, aligned to 15 s slots. It runs in the browser: demo data, not field readings.
+  // Set CFG.endpoint to a real JSON feed to switch to live data (normalise() maps common shapes).
   (function(){
-    var CFG = {
-      endpoint: 'https://chip.sunified.ai/api/panels', // adjust to the real feed path
-      intervalMs: 15000,
-      panelCount: 6
-    };
+    var CFG = { endpoint: null, intervalMs: 15000, panelCount: 6 };
     var grid = document.getElementById('panels');
     var stat = document.getElementById('feedstat');
     var label = document.getElementById('feedlabel');
-    var history = {}; // id -> last 12 readings
-    var simState = null;
-
-    function rating(w, nominal){
-      var r = w / nominal;
-      return r > 0.92 ? ['AAA','aaa'] : r > 0.8 ? ['AA','aa'] : ['WATCH','watch'];
+    function addr(){ var h='0123456789abcdef', t='0x'; for (var k=0;k<40;k++) t+=h[Math.floor(Math.random()*16)]; return t; }
+    function hash(id, v, e, ts){
+      var r = 'panel' + id + '-' + v.toFixed(2) + '-' + e.toFixed(3) + '-' + ts, x = 0;
+      for (var k=0;k<r.length;k++){ x = (x<<5) - x + r.charCodeAt(k); x &= x; }
+      return Math.abs(x).toString(16).slice(0,10);
     }
-    function render(panels, live){
+    function step(p){ // energy (kWh) for one 15 s slot, same curve as chip.sunified.ai
+      var d = new Date(), hr = d.getHours();
+      var doy = Math.floor((d.getTime() - new Date(d.getFullYear(),0,0).getTime()) / 864e5);
+      var sun = (hr >= 6 && hr < 20) ? Math.sin((hr-6)*Math.PI/14) * (0.25*Math.sin((doy-172)*Math.PI/365) + 1) : 0;
+      return { e: 625e-6 * sun * p.eff, v: p.baseV + (Math.random()-0.5)*0.1, t: 22.1 };
+    }
+    var panels = [];
+    for (var k=1;k<=CFG.panelCount;k++){
+      var bv = 12 + (Math.random()-0.5)*0.2;
+      var eff = 0.98 + 0.04*Math.random();
+      if (k === 5) eff *= 0.74; // one underperformer so the WATCH state shows
+      panels.push({ id:k, address:addr(), baseV:bv, eff:eff, energy:0, hist:[] });
+    }
+    function rating(eff){ return eff > 0.92 ? ['AAA','aaa'] : eff > 0.8 ? ['AA','aa'] : ['WATCH','watch']; }
+    function read(p, ts){
+      var r = step(p); p.energy += r.e;
+      p.last = { ts:ts, e:p.energy, de:r.e, v:r.v, t:r.t, h:hash(p.id, r.v, p.energy, ts) };
+      p.hist = p.hist.concat([r.v]).slice(-12);
+    }
+    // backfill two prior 15 s slots, like chip.sunified.ai
+    var now = new Date(), slot = now.getTime() - (now.getSeconds()%15)*1000 - now.getMilliseconds();
+    panels.forEach(function(p){ for (var b=2;b>=0;b--) read(p, slot - b*15000); });
+    function fmtT(ts){ return new Date(ts).toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}); }
+    function render(list, live){
       stat.className = 'feedstat' + (live ? '' : ' sim');
-      label.textContent = live ? 'LIVE \u00B7 15s' : 'SIMULATED \u00B7 feed unreachable';
+      label.textContent = live ? 'LIVE \u00B7 15s' : 'DEMO DATA \u00B7 15s';
       grid.innerHTML = '';
-      panels.forEach(function(p){
-        var h = history[p.id] = (history[p.id] || []).concat([p.watts]).slice(-12);
-        var max = Math.max.apply(null, h);
-        var rt = rating(p.watts, p.nominal || 400);
+      list.forEach(function(p){
+        var L = p.last, rt = rating(p.eff);
+        var mx = Math.max.apply(null, p.hist), mn = Math.min.apply(null, p.hist), span = (mx - mn) || 1;
         var el = document.createElement('div');
         el.className = 'pnl tick';
-        el.innerHTML = '<div class="pid">' + p.id + '</div>'
-          + '<div class="pw">' + Math.round(p.watts) + '<small>W</small></div>'
+        el.innerHTML = '<div class="pid">PNL-0' + p.id + '</div>'
+          + '<div class="paddr mono" title="PV Address ' + p.address + '">' + p.address.slice(0,6) + '\u2026' + p.address.slice(-4) + '</div>'
+          + '<div class="pw">' + L.e.toFixed(4) + '<small>kWh</small></div>'
           + '<div class="pr ' + rt[1] + '">' + rt[0] + '</div>'
-          + '<div class="spark">' + h.map(function(v){ return '<i style="height:' + Math.max(8, v / max * 100) + '%"></i>'; }).join('') + '</div>';
+          + '<dl class="pm"><div><dt>Voltage</dt><dd>' + L.v.toFixed(1) + ' V</dd></div><div><dt>Temp</dt><dd>' + L.t.toFixed(1) + '\u00B0C</dd></div></dl>'
+          + '<div class="pv"><span class="vdot"></span>UNITY Sensor VERIFIED</div>'
+          + '<div class="ph mono" title="Latest reading hash">#' + L.h + '<br>' + fmtT(L.ts) + '</div>'
+          + '<div class="spark">' + p.hist.map(function(v){ return '<i style="height:' + (25 + (v - mn) / span * 75) + '%"></i>'; }).join('') + '</div>';
         grid.appendChild(el);
         setTimeout(function(){ el.classList.remove('tick'); }, 900);
       });
     }
-    // adapter: accept several plausible payload shapes
     function normalise(data){
-      var arr = Array.isArray(data) ? data : (data.panels || data.readings || data.data);
+      var arr = Array.isArray(data) ? data : (data && (data.panels || data.readings || data.data));
       if (!Array.isArray(arr)) return null;
-      return arr.slice(0, CFG.panelCount).map(function(p, i){
-        return {
-          id: p.id || p.panel_id || p.serial || ('PNL-0' + (i + 1)),
-          watts: Number(p.watts != null ? p.watts : (p.power != null ? p.power : (p.w != null ? p.w : p.output))) || 0,
-          nominal: Number(p.nominal || p.rated || p.capacity) || 400
-        };
+      return arr.slice(0, CFG.panelCount).map(function(q, n){
+        var p = panels[n]; var ts = Date.now();
+        var e = Number(q.energy != null ? q.energy : q.kwh) || 0, v = Number(q.voltage != null ? q.voltage : q.v) || 0;
+        p.address = q.address || q.pv_address || p.address;
+        p.last = { ts:ts, e:e, de:0, v:v, t:Number(q.temperature != null ? q.temperature : q.temp) || 0, h:String(q.hash || hash(p.id, v, e, ts)).slice(0,10) };
+        p.hist = p.hist.concat([v]).slice(-12);
+        return p;
       });
     }
-    function simulate(){
-      if (!simState) simState = Array.from({length: CFG.panelCount}, function(_, i){
-        return { id: 'PNL-0' + (i + 1), base: 300 + Math.random() * 80 };
-      });
-      var t = Date.now() / 60000;
-      return simState.map(function(s, i){
-        var w = s.base + Math.sin(t + i * 1.1) * 22 + (Math.random() - 0.5) * 14;
-        if (i === 4) w *= 0.74; // one underperformer so the WATCH state shows
-        return { id: s.id, watts: Math.max(0, w), nominal: 420 };
-      });
+    function tick(){
+      if (CFG.endpoint){
+        fetch(CFG.endpoint, { mode:'cors' }).then(function(r){ if (!r.ok) throw 0; return r.json(); })
+          .then(function(d){ var l = normalise(d); if (l && l.length) render(l, true); else demo(); })
+          .catch(demo);
+      } else demo();
     }
-    function poll(){
-      fetch(CFG.endpoint, { mode: 'cors' })
-        .then(function(r){ if (!r.ok) throw 0; return r.json(); })
-        .then(function(d){
-          var p = normalise(d);
-          if (p && p.length) render(p, true); else render(simulate(), false);
-        })
-        .catch(function(){ render(simulate(), false); });
-    }
-    poll();
-    setInterval(poll, CFG.intervalMs);
+    function demo(){ var ts = Date.now(); panels.forEach(function(p){ read(p, ts); }); render(panels, false); }
+    render(panels, false);
+    var wait = 1000*(15 - (new Date().getSeconds() % 15)) - new Date().getMilliseconds();
+    setTimeout(function(){ tick(); setInterval(tick, CFG.intervalMs); }, wait);
   })();
 </script>
 </body></html>
