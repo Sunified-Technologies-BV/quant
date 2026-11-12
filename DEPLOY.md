@@ -1,11 +1,11 @@
-# DEPLOY — quant.sunified.ai
+# DEPLOY · quant.sunified.ai
 
 Operational record of how this site is hosted, how DNS is wired, and how changes reach production. Last updated 2026-07-07.
 
 ## Where it runs
 Production is served by **Vercel** (account `lg-4884`, project `sunified-quant`) over HTTPS at **https://quant.sunified.ai**.
 
-This repo still contains a GitHub Actions Pages workflow from an earlier attempt. **GitHub Pages is not the live host** — Vercel serves production. The Pages workflow can be ignored or removed.
+This repo still contains a GitHub Actions Pages workflow from an earlier attempt. **GitHub Pages is not the live host**: Vercel serves production. The Pages workflow can be ignored or removed.
 
 ## DNS (GoDaddy, zone sunified.ai)
 
@@ -26,9 +26,9 @@ Because sunified.ai is not registered inside the Vercel account, each subdomain 
 Note: the `vercel domains add` CLI returns a bare "Not authorized (403)" and hides the token. Use the REST API above.
 
 ## How changes reach production (current state)
-Deploys are run from a local working copy with the Vercel CLI: `vercel deploy --prod` from this project directory. **Pushing to this GitHub repo does NOT auto-deploy** — the Vercel project is not yet Git-connected.
+The Vercel project is Git-connected: every push to `main` auto-deploys to production (verified via vercel[bot] Production deployments on GitHub). The Vercel CLI (`vercel deploy --prod`) still works as a manual fallback.
 
-**Recommended target:** connect the Vercel project to this repo (Vercel dashboard, Project, Settings, Git). Then merges to `main` auto-deploy, and the team workflow becomes: branch, PR, Hicham (CTO) merges, Vercel deploys.
+Team workflow: branch, PR, Hicham (CTO) merges, Vercel deploys.
 
 ## Access and editing
 - Org: `Sunified-Technologies-BV`. Write access via the `alpha-editors` team. Admins: FUSED-ID, x409.
