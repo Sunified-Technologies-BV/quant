@@ -202,7 +202,7 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
 
 <div class="wrap"><section id="feed">
   <div class="feedhead">
-    <div class="sechead" style="margin-bottom:0">Live panel feed &#183; Enlit demo array</div>
+    <div class="sechead" style="margin-bottom:0" id="feedhead">Demo feed &#183; Enlit demo array</div>
     <div class="feedstat sim" id="feedstat"><span class="fdot"></span><span id="feedlabel">DEMO DATA &#183; 15s</span></div>
   </div>
   <div class="panels" id="panels"></div>
@@ -282,6 +282,7 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
     var grid = document.getElementById('panels');
     var stat = document.getElementById('feedstat');
     var label = document.getElementById('feedlabel');
+    var head = document.getElementById('feedhead');
     function addr(){ var h='0123456789abcdef', t='0x'; for (var k=0;k<40;k++) t+=h[Math.floor(Math.random()*16)]; return t; }
     function hash(id, v, e, ts){
       var r = 'panel' + id + '-' + v.toFixed(2) + '-' + e.toFixed(3) + '-' + ts, x = 0;
@@ -313,6 +314,7 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
     function render(list, live){
       stat.className = 'feedstat' + (live ? '' : ' sim');
       label.textContent = live ? 'LIVE \u00B7 15s' : 'DEMO DATA \u00B7 15s';
+      head.textContent = live ? 'Live feed' : 'Demo feed \u00B7 Enlit demo array';
       grid.innerHTML = '';
       list.forEach(function(p){
         var L = p.last, rt = rating(p.eff);
