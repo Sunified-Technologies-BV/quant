@@ -111,8 +111,7 @@ section{padding:44px 0;border-top:1px solid var(--line)}
 .feedstat .fdot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 .feedstat.sim .fdot{background:var(--grey);animation:none}
 .panels{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
-@media(min-width:560px){.panels{grid-template-columns:repeat(3,1fr)}}
-@media(min-width:1000px){.panels{grid-template-columns:repeat(6,1fr)}}
+@media(min-width:1000px){.panels{grid-template-columns:repeat(4,1fr)}}
 .pnl{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:14px 14px 12px;transition:border-color .3s;min-width:0}
 .pnl.tick{border-color:rgba(215,253,0,.45)}
 .pnl .pid{font-family:var(--font-mono);font-size:11px;letter-spacing:1px;color:var(--mute)}
@@ -207,7 +206,7 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
     <div class="feedstat sim" id="feedstat"><span class="fdot"></span><span id="feedlabel">DEMO DATA &#183; 15s</span></div>
   </div>
   <div class="panels" id="panels"></div>
-  <div class="feednote">Six-panel demo array, using the same per-panel generator as the Enlit demo at <a href="https://chip.sunified.ai" target="_blank" rel="noopener">chip.sunified.ai</a> &#183; refreshed every 15 seconds. Demo data generated in your browser, not measured field readings. Each card shows the PV address, energy, voltage, temperature, UNITY Sensor state and the latest reading hash.</div>
+  <div class="feednote">Four-panel demo array, using the same per-panel generator as the Enlit demo at <a href="https://chip.sunified.ai" target="_blank" rel="noopener">chip.sunified.ai</a> &#183; refreshed every 15 seconds. Demo data generated in your browser, not measured field readings. Each card shows the PV address, energy, voltage, temperature, UNITY Sensor state and the latest reading hash.</div>
 </section></div>
 
 <div class="wrap"><section>
@@ -279,7 +278,7 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
   // short hash per reading, aligned to 15 s slots. It runs in the browser: demo data, not field readings.
   // Set CFG.endpoint to a real JSON feed to switch to live data (normalise() maps common shapes).
   (function(){
-    var CFG = { endpoint: null, intervalMs: 15000, panelCount: 6 };
+    var CFG = { endpoint: null, intervalMs: 15000, panelCount: 4 };
     var grid = document.getElementById('panels');
     var stat = document.getElementById('feedstat');
     var label = document.getElementById('feedlabel');
@@ -299,7 +298,6 @@ footer{background:var(--bg);border-top:1px solid var(--line);padding:24px 0 calc
     for (var k=1;k<=CFG.panelCount;k++){
       var bv = 12 + (Math.random()-0.5)*0.2;
       var eff = 0.98 + 0.04*Math.random();
-      if (k === 5) eff *= 0.74; // one underperformer so the WATCH state shows
       panels.push({ id:k, address:addr(), baseV:bv, eff:eff, energy:0, hist:[] });
     }
     function rating(eff){ return eff > 0.92 ? ['AAA','aaa'] : eff > 0.8 ? ['AA','aa'] : ['WATCH','watch']; }
